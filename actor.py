@@ -1,17 +1,15 @@
-# actor.py
 import zmq
 import time
 import sys
 
-# ----------------------------
+
 # Configuración
-# ----------------------------
+
 GC_IP = "tcp://10.43.103.177:5556"  # IP del GC (PUB)
 TOPICO = b"devolucion"  # valor por defecto, se puede cambiar por argumento
 
-# ----------------------------
+
 # Ejecución principal
-# ----------------------------
 if __name__ == "__main__":
     # Permitir seleccionar el tópico como argumento
     # Ejemplo: python actor.py renovacion
@@ -23,8 +21,8 @@ if __name__ == "__main__":
     socket.connect(GC_IP)
     socket.setsockopt(zmq.SUBSCRIBE, TOPICO)
 
-    print(f"🎭 Actor suscrito al canal '{TOPICO.decode()}' del Gestor de Carga...")
-    print(f"📡 Esperando mensajes...\n")
+    print(f"Actor suscrito al canal '{TOPICO.decode()}' del Gestor de Carga...")
+    print(f"Esperando mensajes...\n")
 
     while True:
         # Recibir mensaje del canal
@@ -34,5 +32,5 @@ if __name__ == "__main__":
         usuario, libro = contenido.split(",", 1)
 
         # Simular procesamiento
-        print(f"📥 [{topico.upper()}] Usuario: {usuario} | Libro: {libro}")
+        print(f" [{topico.upper()}] Usuario: {usuario} | Libro: {libro}")
         time.sleep(0.5)  # simulación de acción (guardar, confirmar, etc.)
