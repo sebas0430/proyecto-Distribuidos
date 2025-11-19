@@ -1,4 +1,3 @@
-
 prestamo,user101,ISBN0100
 prestamo,user102,ISBN0200
 prestamo,user103,ISBN0300

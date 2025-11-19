@@ -4,15 +4,15 @@ import sys
 import time
 
 class Actor:
-    def __init__(self, tipo_actor, gc_pub_port="5556", ga_req_port="5557", gc_ip="tcp://10.43.103.177"):
+    def __init__(self, tipo_actor, gc_ip, gc_pub_port, ga_req_port):
         """
         Actor que procesa operaciones del sistema
         
         Args:
-            tipo_actor: "devolucion", "renovacion" o "prestamo"
+            tipo_actor: "devolucion" o "renovacion"
+            gc_ip: IP del Gestor de Carga (formato: tcp://10.43.103.177)
             gc_pub_port: puerto PUB del Gestor de Carga
             ga_req_port: puerto REP del Gestor de Almacenamiento
-            gc_ip: IP del Gestor de Carga
         """
         self.tipo = tipo_actor
         self.context = zmq.Context()
@@ -22,17 +22,18 @@ class Actor:
             self.socket_sub = self.context.socket(zmq.SUB)
             self.socket_sub.connect(f"{gc_ip}:{gc_pub_port}")
             self.socket_sub.setsockopt(zmq.SUBSCRIBE, tipo_actor.encode())
-            print(f"🎭 Actor {tipo_actor.upper()} suscrito al canal '{tipo_actor}'")
+            print(f" Actor {tipo_actor.upper()} suscrito al canal '{tipo_actor}'")
+            print(f" GC PUB: {gc_ip}:{gc_pub_port}")
         
         # Socket para comunicarse con GA
         self.socket_ga = self.context.socket(zmq.REQ)
         self.socket_ga.connect(f"{gc_ip}:{ga_req_port}")
         
-        print(f"💾 Conectado al GA en puerto {ga_req_port}\n")
+        print(f" Conectado al GA en {gc_ip}:{ga_req_port}\n")
     
     def procesar_devolucion_async(self):
         """Procesa devoluciones (modo asíncrono vía PUB-SUB)"""
-        print("📡 Esperando devoluciones...\n")
+        print(" Esperando devoluciones...\n")
         
         while True:
             try:
@@ -41,7 +42,7 @@ class Actor:
                 topico, contenido = mensaje.split(" ", 1)
                 usuario, libro = contenido.split(",", 1)
                 
-                print(f"📥 DEVOLUCIÓN | Usuario: {usuario} | Libro: {libro}")
+                print(f" DEVOLUCIÓN | Usuario: {usuario} | Libro: {libro}")
                 
                 # Enviar a GA para actualizar BD
                 solicitud = {
@@ -62,14 +63,14 @@ class Actor:
                 time.sleep(0.1)
                 
             except KeyboardInterrupt:
-                print("\n🛑 Deteniendo Actor de Devoluciones...")
+                print("\n Deteniendo Actor de Devoluciones...")
                 break
             except Exception as e:
                 print(f"❌ Error procesando devolución: {e}\n")
     
     def procesar_renovacion_async(self):
         """Procesa renovaciones (modo asíncrono vía PUB-SUB)"""
-        print("📡 Esperando renovaciones...\n")
+        print(" Esperando renovaciones...\n")
         
         while True:
             try:
@@ -78,7 +79,7 @@ class Actor:
                 topico, contenido = mensaje.split(" ", 1)
                 usuario, libro = contenido.split(",", 1)
                 
-                print(f"📥 RENOVACIÓN | Usuario: {usuario} | Libro: {libro}")
+                print(f" RENOVACIÓN | Usuario: {usuario} | Libro: {libro}")
                 
                 # Enviar a GA para actualizar BD
                 solicitud = {
@@ -99,7 +100,7 @@ class Actor:
                 time.sleep(0.1)
                 
             except KeyboardInterrupt:
-                print("\n🛑 Deteniendo Actor de Renovaciones...")
+                print("\n Deteniendo Actor de Renovaciones...")
                 break
             except Exception as e:
                 print(f"❌ Error procesando renovación: {e}\n")
@@ -114,23 +115,24 @@ class Actor:
             print(f"❌ Tipo de actor desconocido: {self.tipo}")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Uso: python actor_completo.py <tipo>")
-        print("Tipos: devolucion, renovacion")
+    if len(sys.argv) < 5:
+        print("Uso: python actor.py <tipo> <gc_ip> <gc_pub_port> <ga_req_port>")
+        print("\nEjemplos:")
+        print("  Sede 1: python actor.py devolucion tcp://10.43.103.177 5556 5557")
+        print("  Sede 2: python actor.py devolucion tcp://10.43.103.132 5566 5558")
+        print("\nTipos: devolucion, renovacion")
         sys.exit(1)
     
     tipo_actor = sys.argv[1].lower()
-    
-    # Configuración (ajustar según tu red)
-    GC_IP = "tcp://10.43.103.177"  # Cambiar por IP real del GC
-    GC_PUB_PORT = "5556"
-    GA_REQ_PORT = "5557"
+    GC_IP = sys.argv[2]
+    GC_PUB_PORT = sys.argv[3]
+    GA_REQ_PORT = sys.argv[4]
     
     actor = Actor(
         tipo_actor=tipo_actor,
+        gc_ip=GC_IP,
         gc_pub_port=GC_PUB_PORT,
-        ga_req_port=GA_REQ_PORT,
-        gc_ip=GC_IP
+        ga_req_port=GA_REQ_PORT
     )
     
     actor.ejecutar()

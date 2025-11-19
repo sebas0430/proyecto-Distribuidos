@@ -4,7 +4,7 @@ import time
 from datetime import datetime, timedelta
 
 class GestorCarga:
-    def __init__(self, sede, puerto_rep="5555", puerto_pub="5556", ga_port="5557"):
+    def __init__(self, sede, puerto_rep="5555", puerto_pub="5556", puerto_prestamo="5570"):
         """
         Gestor de Carga - Coordina las operaciones del sistema
         
@@ -12,7 +12,7 @@ class GestorCarga:
             sede: número de sede (1 o 2)
             puerto_rep: puerto para recibir solicitudes de PS (REP)
             puerto_pub: puerto para publicar mensajes a Actores (PUB)
-            ga_port: puerto del Gestor de Almacenamiento
+            puerto_prestamo: puerto para comunicación síncrona con Actor Préstamo (REQ)
         """
         self.sede = sede
         self.context = zmq.Context()
@@ -25,14 +25,14 @@ class GestorCarga:
         self.socket_pub = self.context.socket(zmq.PUB)
         self.socket_pub.bind(f"tcp://*:{puerto_pub}")
         
-        # Socket REQ: comunicación con GA (síncrona para préstamos)
-        self.socket_ga = self.context.socket(zmq.REQ)
-        self.socket_ga.connect(f"tcp://localhost:{ga_port}")
+        # Socket REQ: comunicación SÍNCRONA con Actor Préstamo
+        self.socket_prestamo = self.context.socket(zmq.REQ)
+        self.socket_prestamo.bind(f"tcp://*:{puerto_prestamo}")
         
         print(f"⚙️  Gestor de Carga Sede {sede} iniciado")
         print(f"📡 REP (PS): puerto {puerto_rep}")
-        print(f"📢 PUB (Actores): puerto {puerto_pub}")
-        print(f"💾 REQ (GA): puerto {ga_port}\n")
+        print(f"📢 PUB (Actores Async): puerto {puerto_pub}")
+        print(f"🔗 REQ (Actor Préstamo): puerto {puerto_prestamo}\n")
         
         # Pequeña pausa para que PUB se establezca
         time.sleep(0.5)
@@ -74,40 +74,25 @@ class GestorCarga:
         return respuesta
     
     def procesar_prestamo(self, usuario, libro):
-        """Procesa préstamo de forma SÍNCRONA"""
+        """Procesa préstamo de forma SÍNCRONA a través de Actor"""
         print(f"📥 PRÉSTAMO | Usuario: {usuario} | Libro: {libro}")
         
         try:
-            # 1. Verificar disponibilidad en GA
-            solicitud = {
-                "operacion": "verificar_disponibilidad",
-                "codigo": libro
-            }
-            
-            self.socket_ga.send_string(json.dumps(solicitud))
-            respuesta_json = self.socket_ga.recv_string()
-            verificacion = json.loads(respuesta_json)
-            
-            if not verificacion["disponible"]:
-                print(f"❌ {verificacion['mensaje']}\n")
-                return {
-                    "exito": False,
-                    "mensaje": verificacion["mensaje"]
-                }
-            
-            # 2. Realizar préstamo en GA
+            # Enviar solicitud al Actor Préstamo
             solicitud = {
                 "operacion": "prestamo",
                 "codigo": libro,
                 "usuario": usuario
             }
             
-            self.socket_ga.send_string(json.dumps(solicitud))
-            respuesta_json = self.socket_ga.recv_string()
+            self.socket_prestamo.send_string(json.dumps(solicitud))
+            
+            # Esperar respuesta del Actor (síncrono)
+            respuesta_json = self.socket_prestamo.recv_string()
             resultado = json.loads(respuesta_json)
             
             if resultado["exito"]:
-                print(f"✅ Préstamo otorgado hasta {resultado['fecha_devolucion']}\n")
+                print(f"✅ Préstamo otorgado hasta {resultado.get('fecha_devolucion', 'N/A')}\n")
             else:
                 print(f"❌ {resultado['mensaje']}\n")
             
@@ -167,7 +152,10 @@ class GestorCarga:
             except Exception as e:
                 print(f"❌ Error general: {e}")
                 respuesta = {"exito": False, "mensaje": str(e)}
-                self.socket_rep.send_string(json.dumps(respuesta))
+                try:
+                    self.socket_rep.send_string(json.dumps(respuesta))
+                except:
+                    pass
 
 if __name__ == "__main__":
     import sys
@@ -176,28 +164,34 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         sede = int(sys.argv[1])
     else:
-        sede = 1
+        print("Uso: python gestor_carga.py <sede>")
+        print("Ejemplo: python gestor_carga.py 1")
+        sys.exit(1)
     
     # Configuración por sede
     configuraciones = {
         1: {
             "puerto_rep": "5555",
             "puerto_pub": "5556",
-            "ga_port": "5557"
+            "puerto_prestamo": "5570"
         },
         2: {
             "puerto_rep": "5565",
             "puerto_pub": "5566",
-            "ga_port": "5558"
+            "puerto_prestamo": "5571"
         }
     }
     
-    config = configuraciones[sede]
+    config = configuraciones.get(sede)
+    if not config:
+        print(f"❌ Sede {sede} no válida. Use 1 o 2")
+        sys.exit(1)
+    
     gc = GestorCarga(
         sede=sede,
         puerto_rep=config["puerto_rep"],
         puerto_pub=config["puerto_pub"],
-        ga_port=config["ga_port"]
+        puerto_prestamo=config["puerto_prestamo"]
     )
     
     gc.ejecutar()
