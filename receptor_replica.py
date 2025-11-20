@@ -24,7 +24,8 @@ class ReceptorReplica:
         
         print(f" Receptor de Réplica Sede {sede} iniciado")
         print(f" PULL: puerto {puerto_pull}")
-        print(f" BD Réplica SQLite: {self.db_file}\n")
+        print(f" BD Réplica SQLite: {self.db_file}")
+        print(f"   Recibiendo operaciones de Sede {3-sede}\n")  # 3-1=2, 3-2=1
         
         # Inicializar BD réplica si no existe
         self.inicializar_bd_replica()
@@ -86,6 +87,15 @@ class ReceptorReplica:
             fecha_prestamo = operacion["fecha_prestamo"]
             fecha_devolucion = operacion["fecha_devolucion"]
             
+            # Verificar si el libro existe en la réplica
+            cursor.execute("SELECT * FROM libros WHERE codigo = ?", (codigo,))
+            libro = cursor.fetchone()
+            
+            if not libro:
+                print(f"⚠️  Libro {codigo} no existe en réplica, saltando operación")
+                conn.close()
+                return
+            
             # Insertar préstamo
             cursor.execute(
                 "INSERT INTO prestamos (codigo, usuario, fecha_prestamo, fecha_devolucion, renovaciones) VALUES (?, ?, ?, ?, ?)",
@@ -115,6 +125,15 @@ class ReceptorReplica:
         try:
             codigo = operacion["codigo"]
             usuario = operacion["usuario"]
+            
+            # Verificar si el libro existe
+            cursor.execute("SELECT * FROM libros WHERE codigo = ?", (codigo,))
+            libro = cursor.fetchone()
+            
+            if not libro:
+                print(f"⚠️  Libro {codigo} no existe en réplica, saltando operación")
+                conn.close()
+                return
             
             # Eliminar préstamo
             cursor.execute(
@@ -190,6 +209,7 @@ class ReceptorReplica:
                 
                 # Aplicar operación en réplica
                 self.aplicar_operacion(operacion)
+                print()  # Línea en blanco para separar operaciones
                 
             except KeyboardInterrupt:
                 print("\n Deteniendo Receptor de Réplica...")
@@ -206,7 +226,12 @@ if __name__ == "__main__":
     sede = int(sys.argv[1])
     
     # Configuración por sede
-    puerto_pull = "5559" if sede == 1 else "5560"
+    if sede == 1:
+        # Sede 1 recibe replicaciones de Sede 2 en puerto 5559
+        puerto_pull = "5559"
+    else:  # sede == 2
+        # Sede 2 recibe replicaciones de Sede 1 en puerto 5560
+        puerto_pull = "5560"
     
     receptor = ReceptorReplica(sede=sede, puerto_pull=puerto_pull)
     receptor.ejecutar()

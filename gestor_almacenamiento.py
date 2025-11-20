@@ -9,13 +9,13 @@ import os
 class GestorAlmacenamiento:
     def __init__(self, sede, puerto_rep="5557", replica_ip=None, replica_port=None):
         """
-        Gestor de Almacenamiento - Maneja BD SQLite primaria y réplica
+        Gestor de Almacenamiento - Maneja BD SQLite primaria y r�plica
         
         Args:
-            sede: número de sede (1 o 2)
+            sede: n�mero de sede (1 o 2)
             puerto_rep: puerto para recibir solicitudes (REP)
-            replica_ip: IP de la réplica secundaria
-            replica_port: puerto de la réplica secundaria
+            replica_ip: IP de la r�plica secundaria
+            replica_port: puerto de la r�plica secundaria
         """
         self.sede = sede
         self.db_file = f"bd_sede{sede}.db"
@@ -28,22 +28,23 @@ class GestorAlmacenamiento:
         self.socket_rep = self.context.socket(zmq.REP)
         self.socket_rep.bind(f"tcp://*:{puerto_rep}")
         
-        # Socket PUSH: para comunicarse con réplica (asíncrono)
+        # Socket PUSH: para comunicarse con r�plica (as�ncrono)
         self.socket_replica = None
         if replica_ip and replica_port:
             self.socket_replica = self.context.socket(zmq.PUSH)
             self.socket_replica.connect(f"tcp://{replica_ip}:{replica_port}")
-            print(f"🔄 Conectado a réplica en {replica_ip}:{replica_port}")
+            print(f"= Conectado a r�plica en {replica_ip}:{replica_port}")
+            time.sleep(1)  # Esperar a que PULL est� listo
         
-        print(f"💾 Gestor de Almacenamiento Sede {sede} iniciado")
-        print(f"📡 REP: puerto {puerto_rep}")
-        print(f"📚 Base de datos SQLite: {self.db_file}\n")
+        print(f"=� Gestor de Almacenamiento Sede {sede} iniciado")
+        print(f"=� REP: puerto {puerto_rep}")
+        print(f"=� Base de datos SQLite: {self.db_file}\n")
         
         # Inicializar BD
         self.inicializar_bd()
         
     def get_connection(self):
-        """Crea una conexión a la BD SQLite"""
+        """Crea una conexi�n a la BD SQLite"""
         conn = sqlite3.connect(self.db_file)
         conn.row_factory = sqlite3.Row  # Para acceder por nombre de columna
         return conn
@@ -82,7 +83,7 @@ class GestorAlmacenamiento:
         count = cursor.fetchone()[0]
         
         if count == 0:
-            print("⚙️  Inicializando BD con 1000 libros...")
+            print("�  Inicializando BD con 1000 libros...")
             
             # Insertar 1000 libros
             libros = []
@@ -100,7 +101,7 @@ class GestorAlmacenamiento:
                 libros
             )
             
-            # Crear préstamos iniciales (50 sede 1, 150 sede 2)
+            # Crear pr�stamos iniciales (50 sede 1, 150 sede 2)
             prestamos_por_sede = 50 if self.sede == 1 else 150
             fecha_prestamo = datetime.now().strftime("%Y-%m-%d")
             fecha_devolucion = (datetime.now() + timedelta(weeks=2)).strftime("%Y-%m-%d")
@@ -124,22 +125,29 @@ class GestorAlmacenamiento:
                 )
             
             conn.commit()
-            print(f"✅ BD inicializada: 1000 libros, {prestamos_por_sede} préstamos")
+            print(f" BD inicializada: 1000 libros, {prestamos_por_sede} pr�stamos")
         else:
-            print(f"✅ BD cargada: {count} libros existentes")
+            print(f" BD cargada: {count} libros existentes")
         
         conn.close()
     
     def replicar_operacion(self, operacion):
-        """Envía operación a réplica de forma asíncrona"""
+        """Env�a operaci�n a r�plica de forma as�ncrona"""
         if self.socket_replica:
             try:
-                self.socket_replica.send_string(json.dumps(operacion), zmq.NOBLOCK)
-                print(f"🔄 Operación replicada")
+                mensaje = json.dumps(operacion)
+                print(f"= Intentando replicar a {self.replica_ip}:{self.replica_port}")
+                print(f"   Operaci�n: {operacion.get('tipo', 'desconocido')} - C�digo: {operacion.get('codigo', 'N/A')} - Usuario: {operacion.get('usuario', 'N/A')}")
+                self.socket_replica.send_string(mensaje, zmq.NOBLOCK)
+                print(f" Operaci�n enviada correctamente a la r�plica\n")
             except zmq.error.Again:
-                print(f"⚠️  Réplica ocupada, operación no replicada")
+                print(f"�  R�plica ocupada, operaci�n no replicada\n")
             except Exception as e:
-                print(f"❌ Error replicando: {e}")
+                print(f"L Error replicando: {e}")
+                import traceback
+                traceback.print_exc()
+        else:
+            print(f"�  Socket de r�plica no inicializado - NO SE REPLICA\n")
     
     def verificar_disponibilidad(self, codigo):
         """Verifica si hay ejemplares disponibles de un libro"""
@@ -169,7 +177,7 @@ class GestorAlmacenamiento:
         }
     
     def realizar_prestamo(self, codigo, usuario):
-        """Realiza un préstamo de libro"""
+        """Realiza un pr�stamo de libro"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -191,7 +199,7 @@ class GestorAlmacenamiento:
                 (codigo,)
             )
             
-            # Crear préstamo
+            # Crear pr�stamo
             fecha_prestamo = datetime.now().strftime("%Y-%m-%d")
             fecha_devolucion = (datetime.now() + timedelta(weeks=2)).strftime("%Y-%m-%d")
             
@@ -201,6 +209,7 @@ class GestorAlmacenamiento:
             )
             
             conn.commit()
+            conn.close()
             
             # Replicar
             self.replicar_operacion({
@@ -211,11 +220,9 @@ class GestorAlmacenamiento:
                 "fecha_devolucion": fecha_devolucion
             })
             
-            conn.close()
-            
             return {
                 "exito": True,
-                "mensaje": f"Préstamo otorgado de '{libro['titulo']}'",
+                "mensaje": f"Pr�stamo otorgado de '{libro['titulo']}'",
                 "fecha_devolucion": fecha_devolucion
             }
         
@@ -224,16 +231,16 @@ class GestorAlmacenamiento:
             conn.close()
             return {
                 "exito": False,
-                "mensaje": f"Error realizando préstamo: {str(e)}"
+                "mensaje": f"Error realizando pr�stamo: {str(e)}"
             }
     
     def realizar_devolucion(self, codigo, usuario):
-        """Procesa la devolución de un libro"""
+        """Procesa la devoluci�n de un libro"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
         try:
-            # Buscar préstamo
+            # Buscar pr�stamo
             cursor.execute(
                 "SELECT * FROM prestamos WHERE codigo = ? AND usuario = ?",
                 (codigo, usuario)
@@ -244,10 +251,10 @@ class GestorAlmacenamiento:
                 conn.close()
                 return {
                     "exito": False,
-                    "mensaje": f"No se encontró préstamo activo para {usuario} del libro {codigo}"
+                    "mensaje": f"No se encontr� pr�stamo activo para {usuario} del libro {codigo}"
                 }
             
-            # Eliminar préstamo
+            # Eliminar pr�stamo
             cursor.execute(
                 "DELETE FROM prestamos WHERE codigo = ? AND usuario = ?",
                 (codigo, usuario)
@@ -259,11 +266,12 @@ class GestorAlmacenamiento:
                 (codigo,)
             )
             
-            # Obtener título del libro
+            # Obtener t�tulo del libro
             cursor.execute("SELECT titulo, ejemplares_disponibles FROM libros WHERE codigo = ?", (codigo,))
             libro = cursor.fetchone()
             
             conn.commit()
+            conn.close()
             
             # Replicar
             self.replicar_operacion({
@@ -272,11 +280,9 @@ class GestorAlmacenamiento:
                 "usuario": usuario
             })
             
-            conn.close()
-            
             return {
                 "exito": True,
-                "mensaje": f"Devolución de '{libro['titulo']}' registrada. Ejemplares disponibles: {libro['ejemplares_disponibles']}"
+                "mensaje": f"Devoluci�n de '{libro['titulo']}' registrada. Ejemplares disponibles: {libro['ejemplares_disponibles']}"
             }
         
         except Exception as e:
@@ -284,16 +290,16 @@ class GestorAlmacenamiento:
             conn.close()
             return {
                 "exito": False,
-                "mensaje": f"Error en devolución: {str(e)}"
+                "mensaje": f"Error en devoluci�n: {str(e)}"
             }
     
     def realizar_renovacion(self, codigo, usuario):
-        """Procesa la renovación de un préstamo"""
+        """Procesa la renovaci�n de un pr�stamo"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
         try:
-            # Buscar préstamo
+            # Buscar pr�stamo
             cursor.execute(
                 "SELECT * FROM prestamos WHERE codigo = ? AND usuario = ?",
                 (codigo, usuario)
@@ -304,14 +310,14 @@ class GestorAlmacenamiento:
                 conn.close()
                 return {
                     "exito": False,
-                    "mensaje": f"No se encontró préstamo activo para {usuario} del libro {codigo}"
+                    "mensaje": f"No se encontr� pr�stamo activo para {usuario} del libro {codigo}"
                 }
             
             if prestamo['renovaciones'] >= 2:
                 conn.close()
                 return {
                     "exito": False,
-                    "mensaje": "Ya se realizaron las 2 renovaciones máximas permitidas"
+                    "mensaje": "Ya se realizaron las 2 renovaciones m�ximas permitidas"
                 }
             
             # Actualizar fechas
@@ -325,11 +331,12 @@ class GestorAlmacenamiento:
                 (nueva_fecha_str, nuevas_renovaciones, codigo, usuario)
             )
             
-            # Obtener título
+            # Obtener t�tulo
             cursor.execute("SELECT titulo FROM libros WHERE codigo = ?", (codigo,))
             libro = cursor.fetchone()
             
             conn.commit()
+            conn.close()
             
             # Replicar
             self.replicar_operacion({
@@ -340,11 +347,9 @@ class GestorAlmacenamiento:
                 "renovaciones": nuevas_renovaciones
             })
             
-            conn.close()
-            
             return {
                 "exito": True,
-                "mensaje": f"Renovación {nuevas_renovaciones}/2 de '{libro['titulo']}' realizada",
+                "mensaje": f"Renovaci�n {nuevas_renovaciones}/2 de '{libro['titulo']}' realizada",
                 "nueva_fecha": nueva_fecha_str
             }
         
@@ -353,7 +358,7 @@ class GestorAlmacenamiento:
             conn.close()
             return {
                 "exito": False,
-                "mensaje": f"Error en renovación: {str(e)}"
+                "mensaje": f"Error en renovaci�n: {str(e)}"
             }
     
     def procesar_solicitud(self, solicitud):
@@ -379,12 +384,12 @@ class GestorAlmacenamiento:
         else:
             return {
                 "exito": False,
-                "mensaje": f"Operación desconocida: {operacion}"
+                "mensaje": f"Operaci�n desconocida: {operacion}"
             }
     
     def ejecutar(self):
         """Loop principal del GA"""
-        print("🚀 Gestor de Almacenamiento listo para recibir solicitudes...\n")
+        print("=� Gestor de Almacenamiento listo para recibir solicitudes...\n")
         
         while True:
             try:
@@ -392,7 +397,7 @@ class GestorAlmacenamiento:
                 mensaje = self.socket_rep.recv_string()
                 solicitud = json.loads(mensaje)
                 
-                print(f"📩 Solicitud recibida: {solicitud['operacion']}")
+                print(f"=� Solicitud recibida: {solicitud['operacion']}")
                 
                 # Procesar
                 respuesta = self.procesar_solicitud(solicitud)
@@ -401,15 +406,15 @@ class GestorAlmacenamiento:
                 self.socket_rep.send_string(json.dumps(respuesta))
                 
                 if respuesta.get("exito", False) or respuesta.get("disponible", False) or respuesta.get("status") == "ok":
-                    print(f"✅ {respuesta.get('mensaje', 'OK')}\n")
+                    print(f" {respuesta.get('mensaje', 'OK')}\n")
                 else:
-                    print(f"❌ {respuesta.get('mensaje', 'Error')}\n")
+                    print(f"L {respuesta.get('mensaje', 'Error')}\n")
                 
             except KeyboardInterrupt:
-                print("\n🛑 Deteniendo Gestor de Almacenamiento...")
+                print("\n=� Deteniendo Gestor de Almacenamiento...")
                 break
             except Exception as e:
-                print(f"❌ Error: {e}\n")
+                print(f"L Error: {e}\n")
                 respuesta = {"exito": False, "mensaje": str(e)}
                 try:
                     self.socket_rep.send_string(json.dumps(respuesta))
@@ -427,12 +432,12 @@ if __name__ == "__main__":
     # Configuración por sede
     if sede == 1:
         puerto_rep = "5557"
-        replica_ip = "10.43.103.132"  # Sede 2
-        replica_port = "5559"  # Puerto PULL de la réplica
+        replica_ip = "10.43.103.132"  # IP de Comp 2
+        replica_port = "5560"  # Puerto PULL en Comp 2 (donde Sede 1 envía)
     else:  # sede == 2
         puerto_rep = "5558"
-        replica_ip = "10.43.103.177"  # Sede 1
-        replica_port = "5560"  # Puerto PULL de la réplica
+        replica_ip = "10.43.103.177"  # IP de Comp 1
+        replica_port = "5559"  # Puerto PULL en Comp 1 (donde Sede 2 envía)
     
     ga = GestorAlmacenamiento(
         sede=sede,

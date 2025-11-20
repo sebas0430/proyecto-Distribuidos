@@ -114,6 +114,13 @@ class GestorCarga:
                 # Recibir solicitud del PS
                 mensaje = self.socket_rep.recv_string()
                 print(f"📩 Mensaje recibido: {mensaje}")
+
+                 # ------------------------------------------------------------
+                 # Health-check desde el monitor GC
+                 # ------------------------------------------------------------
+                if mensaje == "health_check":
+                    self.socket_rep.send_string(json.dumps({"status": "ok"}))
+                    continue
                 
                 # Parsear mensaje: "tipo,usuario,libro"
                 try:
