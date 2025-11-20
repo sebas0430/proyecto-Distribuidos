@@ -22,9 +22,9 @@ class ReceptorReplica:
         self.socket_pull = self.context.socket(zmq.PULL)
         self.socket_pull.bind(f"tcp://*:{puerto_pull}")
         
-        print(f" Receptor de Réplica Sede {sede} iniciado")
-        print(f" PULL: puerto {puerto_pull}")
-        print(f" BD Réplica SQLite: {self.db_file}")
+        print(f"- Receptor de Réplica Sede {sede} iniciado")
+        print(f"- PULL: puerto {puerto_pull}")
+        print(f"- BD Réplica SQLite: {self.db_file}")
         print(f"   Recibiendo operaciones de Sede {3-sede}\n")  # 3-1=2, 3-2=1
         
         # Inicializar BD réplica si no existe
@@ -69,9 +69,9 @@ class ReceptorReplica:
         count = cursor.fetchone()[0]
         
         if count > 0:
-            print(f"✅ BD réplica cargada: {count} libros")
+            print(f" BD réplica cargada: {count} libros")
         else:
-            print("⚠️  BD réplica vacía. Se sincronizará con las operaciones.")
+            print("  BD réplica vacía. Se sincronizará con las operaciones.")
         
         conn.commit()
         conn.close()
@@ -92,7 +92,7 @@ class ReceptorReplica:
             libro = cursor.fetchone()
             
             if not libro:
-                print(f"⚠️  Libro {codigo} no existe en réplica, saltando operación")
+                print(f"  Libro {codigo} no existe en réplica, saltando operación")
                 conn.close()
                 return
             
@@ -109,11 +109,11 @@ class ReceptorReplica:
             )
             
             conn.commit()
-            print(f"✅ REPLICADO: Préstamo de {codigo} a {usuario}")
+            print(f" REPLICADO: Préstamo de {codigo} a {usuario}")
         
         except Exception as e:
             conn.rollback()
-            print(f"❌ Error replicando préstamo: {e}")
+            print(f" Error replicando préstamo: {e}")
         finally:
             conn.close()
     
@@ -131,7 +131,7 @@ class ReceptorReplica:
             libro = cursor.fetchone()
             
             if not libro:
-                print(f"⚠️  Libro {codigo} no existe en réplica, saltando operación")
+                print(f"  Libro {codigo} no existe en réplica, saltando operación")
                 conn.close()
                 return
             
@@ -148,11 +148,11 @@ class ReceptorReplica:
             )
             
             conn.commit()
-            print(f"✅ REPLICADO: Devolución de {codigo} por {usuario}")
+            print(f"REPLICADO: Devolución de {codigo} por {usuario}")
         
         except Exception as e:
             conn.rollback()
-            print(f"❌ Error replicando devolución: {e}")
+            print(f" Error replicando devolución: {e}")
         finally:
             conn.close()
     
@@ -174,11 +174,11 @@ class ReceptorReplica:
             )
             
             conn.commit()
-            print(f"✅ REPLICADO: Renovación {renovaciones}/2 de {codigo} por {usuario}")
+            print(f" REPLICADO: Renovación {renovaciones}/2 de {codigo} por {usuario}")
         
         except Exception as e:
             conn.rollback()
-            print(f"❌ Error replicando renovación: {e}")
+            print(f" Error replicando renovación: {e}")
         finally:
             conn.close()
     
@@ -193,7 +193,7 @@ class ReceptorReplica:
         elif tipo == "renovacion":
             self.aplicar_renovacion(operacion)
         else:
-            print(f"⚠️  Operación desconocida: {tipo}")
+            print(f" Operación desconocida: {tipo}")
     
     def ejecutar(self):
         """Loop principal del receptor"""
@@ -215,7 +215,7 @@ class ReceptorReplica:
                 print("\n Deteniendo Receptor de Réplica...")
                 break
             except Exception as e:
-                print(f"❌ Error procesando replicación: {e}\n")
+                print(f" Error procesando replicación: {e}\n")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

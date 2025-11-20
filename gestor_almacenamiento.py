@@ -9,13 +9,13 @@ import os
 class GestorAlmacenamiento:
     def __init__(self, sede, puerto_rep="5557", replica_ip=None, replica_port=None):
         """
-        Gestor de Almacenamiento - Maneja BD SQLite primaria y r�plica
+        Gestor de Almacenamiento - Maneja BD SQLite primaria y replica
         
         Args:
-            sede: n�mero de sede (1 o 2)
+            sede: numero de sede (1 o 2)
             puerto_rep: puerto para recibir solicitudes (REP)
-            replica_ip: IP de la r�plica secundaria
-            replica_port: puerto de la r�plica secundaria
+            replica_ip: IP de la replica secundaria
+            replica_port: puerto de la replica secundaria
         """
         self.sede = sede
         self.db_file = f"bd_sede{sede}.db"
@@ -33,18 +33,18 @@ class GestorAlmacenamiento:
         if replica_ip and replica_port:
             self.socket_replica = self.context.socket(zmq.PUSH)
             self.socket_replica.connect(f"tcp://{replica_ip}:{replica_port}")
-            print(f"= Conectado a r�plica en {replica_ip}:{replica_port}")
+            print(f"=Conectado a replica en {replica_ip}:{replica_port}")
             time.sleep(1)  # Esperar a que PULL est� listo
         
-        print(f"=� Gestor de Almacenamiento Sede {sede} iniciado")
-        print(f"=� REP: puerto {puerto_rep}")
-        print(f"=� Base de datos SQLite: {self.db_file}\n")
+        print(f"=Gestor de Almacenamiento Sede {sede} iniciado")
+        print(f"=REP: puerto {puerto_rep}")
+        print(f"=Base de datos SQLite: {self.db_file}\n")
         
         # Inicializar BD
         self.inicializar_bd()
         
     def get_connection(self):
-        """Crea una conexi�n a la BD SQLite"""
+        """Crea una conexion a la BD SQLite"""
         conn = sqlite3.connect(self.db_file)
         conn.row_factory = sqlite3.Row  # Para acceder por nombre de columna
         return conn
@@ -83,7 +83,7 @@ class GestorAlmacenamiento:
         count = cursor.fetchone()[0]
         
         if count == 0:
-            print("�  Inicializando BD con 1000 libros...")
+            print(" Inicializando BD con 1000 libros...")
             
             # Insertar 1000 libros
             libros = []
@@ -125,29 +125,29 @@ class GestorAlmacenamiento:
                 )
             
             conn.commit()
-            print(f" BD inicializada: 1000 libros, {prestamos_por_sede} pr�stamos")
+            print(f" BD inicializada: 1000 libros, {prestamos_por_sede} pr�stamos")
         else:
-            print(f" BD cargada: {count} libros existentes")
+            print(f" BD cargada: {count} libros existentes")
         
         conn.close()
     
     def replicar_operacion(self, operacion):
-        """Env�a operaci�n a r�plica de forma as�ncrona"""
+        """Env�a operacion a replica de forma asincrona"""
         if self.socket_replica:
             try:
                 mensaje = json.dumps(operacion)
-                print(f"= Intentando replicar a {self.replica_ip}:{self.replica_port}")
-                print(f"   Operaci�n: {operacion.get('tipo', 'desconocido')} - C�digo: {operacion.get('codigo', 'N/A')} - Usuario: {operacion.get('usuario', 'N/A')}")
+                print(f"=Intentando replicar a {self.replica_ip}:{self.replica_port}")
+                print(f"   Operacion: {operacion.get('tipo', 'desconocido')} - Codigo: {operacion.get('codigo', 'N/A')} - Usuario: {operacion.get('usuario', 'N/A')}")
                 self.socket_replica.send_string(mensaje, zmq.NOBLOCK)
-                print(f" Operaci�n enviada correctamente a la r�plica\n")
+                print(f"Operacion enviada correctamente a la replica\n")
             except zmq.error.Again:
-                print(f"�  R�plica ocupada, operaci�n no replicada\n")
+                print(f" Replica ocupada, operaci�n no replicada\n")
             except Exception as e:
                 print(f"L Error replicando: {e}")
                 import traceback
                 traceback.print_exc()
         else:
-            print(f"�  Socket de r�plica no inicializado - NO SE REPLICA\n")
+            print(f"  Socket de replica no inicializado - NO SE REPLICA\n")
     
     def verificar_disponibilidad(self, codigo):
         """Verifica si hay ejemplares disponibles de un libro"""
@@ -177,7 +177,7 @@ class GestorAlmacenamiento:
         }
     
     def realizar_prestamo(self, codigo, usuario):
-        """Realiza un pr�stamo de libro"""
+        """Realiza un prestamo de libro"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -222,7 +222,7 @@ class GestorAlmacenamiento:
             
             return {
                 "exito": True,
-                "mensaje": f"Pr�stamo otorgado de '{libro['titulo']}'",
+                "mensaje": f"Prestamo otorgado de '{libro['titulo']}'",
                 "fecha_devolucion": fecha_devolucion
             }
         
@@ -235,7 +235,7 @@ class GestorAlmacenamiento:
             }
     
     def realizar_devolucion(self, codigo, usuario):
-        """Procesa la devoluci�n de un libro"""
+        """Procesa la devolucion de un libro"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -251,7 +251,7 @@ class GestorAlmacenamiento:
                 conn.close()
                 return {
                     "exito": False,
-                    "mensaje": f"No se encontr� pr�stamo activo para {usuario} del libro {codigo}"
+                    "mensaje": f"No se encontro prestamo activo para {usuario} del libro {codigo}"
                 }
             
             # Eliminar pr�stamo
@@ -282,7 +282,7 @@ class GestorAlmacenamiento:
             
             return {
                 "exito": True,
-                "mensaje": f"Devoluci�n de '{libro['titulo']}' registrada. Ejemplares disponibles: {libro['ejemplares_disponibles']}"
+                "mensaje": f"Devolucion de '{libro['titulo']}' registrada. Ejemplares disponibles: {libro['ejemplares_disponibles']}"
             }
         
         except Exception as e:
@@ -389,7 +389,7 @@ class GestorAlmacenamiento:
     
     def ejecutar(self):
         """Loop principal del GA"""
-        print("=� Gestor de Almacenamiento listo para recibir solicitudes...\n")
+        print("= Gestor de Almacenamiento listo para recibir solicitudes...\n")
         
         while True:
             try:
@@ -397,7 +397,7 @@ class GestorAlmacenamiento:
                 mensaje = self.socket_rep.recv_string()
                 solicitud = json.loads(mensaje)
                 
-                print(f"=� Solicitud recibida: {solicitud['operacion']}")
+                print(f"= Solicitud recibida: {solicitud['operacion']}")
                 
                 # Procesar
                 respuesta = self.procesar_solicitud(solicitud)
@@ -406,7 +406,7 @@ class GestorAlmacenamiento:
                 self.socket_rep.send_string(json.dumps(respuesta))
                 
                 if respuesta.get("exito", False) or respuesta.get("disponible", False) or respuesta.get("status") == "ok":
-                    print(f" {respuesta.get('mensaje', 'OK')}\n")
+                    print(f" {respuesta.get('mensaje', 'OK')}\n")
                 else:
                     print(f"L {respuesta.get('mensaje', 'Error')}\n")
                 

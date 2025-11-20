@@ -18,7 +18,7 @@ def generar_solicitudes(n_lineas=20, archivo_salida="solicitudes1.txt"):
         for linea in solicitudes:
             f.write(linea + "\n")
 
-    print(f"✅ Archivo generado: {archivo_salida} con {n_lineas} líneas")
+    print(f" Archivo generado: {archivo_salida} con {n_lineas} líneas")
 
 if __name__ == "__main__":
     generar_solicitudes()

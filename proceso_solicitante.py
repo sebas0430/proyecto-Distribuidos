@@ -19,9 +19,9 @@ def leer_solicitudes(nombre_archivo):
                     tipo_solicitud, usuario, libro = partes
                     solicitudes.append((tipo_solicitud.strip(), usuario.strip(), libro.strip()))
                 else:
-                    print(f"⚠️  Línea ignorada (formato incorrecto): {linea}")
+                    print(f"  Línea ignorada (formato incorrecto): {linea}")
     except FileNotFoundError:
-        print(f"❌ El archivo {nombre_archivo} no fue encontrado.")
+        print(f" El archivo {nombre_archivo} no fue encontrado.")
     return solicitudes
 
 def enviar_solicitud(solicitudes, gc_ip, nombre_ps="PS"):
@@ -30,8 +30,8 @@ def enviar_solicitud(solicitudes, gc_ip, nombre_ps="PS"):
     socket = context.socket(zmq.REQ)
     socket.connect(gc_ip)
     
-    print(f" [{nombre_ps}] Iniciando proceso de solicitudes a {gc_ip}...")
-    print(f" Total de solicitudes: {len(solicitudes)}\n")
+    print(f" [{nombre_ps}] Iniciando proceso de solicitudes a {gc_ip}...")
+    print(f" Total de solicitudes: {len(solicitudes)}\n")
     
     exitosas = 0
     fallidas = 0
@@ -57,17 +57,17 @@ def enviar_solicitud(solicitudes, gc_ip, nombre_ps="PS"):
             respuesta = json.loads(respuesta_json)
             
             if respuesta.get("exito", False):
-                print(f"✅ {respuesta['mensaje']} (Tiempo: {tiempo_respuesta:.2f}ms)\n")
+                print(f" {respuesta['mensaje']} (Tiempo: {tiempo_respuesta:.2f}ms)\n")
                 exitosas += 1
             else:
-                print(f"❌ {respuesta['mensaje']} (Tiempo: {tiempo_respuesta:.2f}ms)\n")
+                print(f" {respuesta['mensaje']} (Tiempo: {tiempo_respuesta:.2f}ms)\n")
                 fallidas += 1
             
             # Simular tiempo entre solicitudes
             time.sleep(random.uniform(0.5, 2.0))
             
         except Exception as e:
-            print(f"❌ Error enviando solicitud: {e}\n")
+            print(f" Error enviando solicitud: {e}\n")
             fallidas += 1
     
     socket.close()
@@ -75,15 +75,15 @@ def enviar_solicitud(solicitudes, gc_ip, nombre_ps="PS"):
     
     # Resumen
     print("\n" + "="*60)
-    print(f" RESUMEN [{nombre_ps}]")
+    print(f" RESUMEN [{nombre_ps}]")
     print("="*60)
     print(f"Total solicitudes: {len(solicitudes)}")
-    print(f"✅ Exitosas: {exitosas}")
-    print(f"❌ Fallidas: {fallidas}")
+    print(f" Exitosas: {exitosas}")
+    print(f" Fallidas: {fallidas}")
     if tiempos:
-        print(f"⏱️  Tiempo promedio de respuesta: {sum(tiempos)/len(tiempos):.2f}ms")
-        print(f"⏱️  Tiempo mínimo: {min(tiempos):.2f}ms")
-        print(f"⏱️  Tiempo máximo: {max(tiempos):.2f}ms")
+        print(f"  Tiempo promedio de respuesta: {sum(tiempos)/len(tiempos):.2f}ms")
+        print(f"  Tiempo mínimo: {min(tiempos):.2f}ms")
+        print(f"  Tiempo máximo: {max(tiempos):.2f}ms")
     print("="*60)
 
 if __name__ == "__main__":
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     
     solicitudes = leer_solicitudes(ARCHIVO_SOLICITUDES)
     if not solicitudes:
-        print("❌ No hay solicitudes para procesar.")
+        print(" No hay solicitudes para procesar.")
         sys.exit(0)
 
     enviar_solicitud(solicitudes, GC_IP, NOMBRE_PS)

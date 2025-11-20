@@ -29,17 +29,17 @@ class GestorCarga:
         self.socket_prestamo = self.context.socket(zmq.REQ)
         self.socket_prestamo.bind(f"tcp://*:{puerto_prestamo}")
         
-        print(f"⚙️  Gestor de Carga Sede {sede} iniciado")
-        print(f"📡 REP (PS): puerto {puerto_rep}")
-        print(f"📢 PUB (Actores Async): puerto {puerto_pub}")
-        print(f"🔗 REQ (Actor Préstamo): puerto {puerto_prestamo}\n")
+        print(f"  Gestor de Carga Sede {sede} iniciado")
+        print(f" REP (PS): puerto {puerto_rep}")
+        print(f" PUB (Actores Async): puerto {puerto_pub}")
+        print(f" REQ (Actor Préstamo): puerto {puerto_prestamo}\n")
         
         # Pequeña pausa para que PUB se establezca
         time.sleep(0.5)
     
     def procesar_devolucion(self, usuario, libro):
         """Procesa devolución de forma asíncrona"""
-        print(f"📥 DEVOLUCIÓN | Usuario: {usuario} | Libro: {libro}")
+        print(f" DEVOLUCIÓN | Usuario: {usuario} | Libro: {libro}")
         
         # Respuesta inmediata al PS
         respuesta = {
@@ -49,13 +49,13 @@ class GestorCarga:
         
         # Publicar al canal para que Actor lo procese
         self.socket_pub.send_string(f"devolucion {usuario},{libro}")
-        print(f"📢 Publicado en canal 'devolucion'\n")
+        print(f" Publicado en canal 'devolucion'\n")
         
         return respuesta
     
     def procesar_renovacion(self, usuario, libro):
         """Procesa renovación de forma asíncrona"""
-        print(f"📥 RENOVACIÓN | Usuario: {usuario} | Libro: {libro}")
+        print(f" RENOVACIÓN | Usuario: {usuario} | Libro: {libro}")
         
         # Calcular nueva fecha (1 semana adicional)
         fecha_actual = datetime.now()
@@ -69,13 +69,13 @@ class GestorCarga:
         
         # Publicar al canal para que Actor lo procese
         self.socket_pub.send_string(f"renovacion {usuario},{libro}")
-        print(f"📢 Publicado en canal 'renovacion'\n")
+        print(f" Publicado en canal 'renovacion'\n")
         
         return respuesta
     
     def procesar_prestamo(self, usuario, libro):
         """Procesa préstamo de forma SÍNCRONA a través de Actor"""
-        print(f"📥 PRÉSTAMO | Usuario: {usuario} | Libro: {libro}")
+        print(f" PRÉSTAMO | Usuario: {usuario} | Libro: {libro}")
         
         try:
             # Enviar solicitud al Actor Préstamo
@@ -92,14 +92,14 @@ class GestorCarga:
             resultado = json.loads(respuesta_json)
             
             if resultado["exito"]:
-                print(f"✅ Préstamo otorgado hasta {resultado.get('fecha_devolucion', 'N/A')}\n")
+                print(f" Préstamo otorgado hasta {resultado.get('fecha_devolucion', 'N/A')}\n")
             else:
-                print(f"❌ {resultado['mensaje']}\n")
+                print(f" {resultado['mensaje']}\n")
             
             return resultado
             
         except Exception as e:
-            print(f"❌ Error procesando préstamo: {e}\n")
+            print(f" Error procesando préstamo: {e}\n")
             return {
                 "exito": False,
                 "mensaje": f"Error del sistema: {str(e)}"
@@ -107,13 +107,13 @@ class GestorCarga:
     
     def ejecutar(self):
         """Loop principal del GC"""
-        print("🚀 Gestor de Carga listo para recibir solicitudes...\n")
+        print(" Gestor de Carga listo para recibir solicitudes...\n")
         
         while True:
             try:
                 # Recibir solicitud del PS
                 mensaje = self.socket_rep.recv_string()
-                print(f"📩 Mensaje recibido: {mensaje}")
+                print(f" Mensaje recibido: {mensaje}")
 
                  # ------------------------------------------------------------
                  # Health-check desde el monitor GC
@@ -148,16 +148,16 @@ class GestorCarga:
                         "exito": False,
                         "mensaje": f"Tipo de operación desconocido: {tipo}"
                     }
-                    print(f"❌ Tipo desconocido: {tipo}\n")
+                    print(f" Tipo desconocido: {tipo}\n")
                 
                 # Enviar respuesta al PS
                 self.socket_rep.send_string(json.dumps(respuesta))
                 
             except KeyboardInterrupt:
-                print("\n🛑 Deteniendo Gestor de Carga...")
+                print("\n Deteniendo Gestor de Carga...")
                 break
             except Exception as e:
-                print(f"❌ Error general: {e}")
+                print(f" Error general: {e}")
                 respuesta = {"exito": False, "mensaje": str(e)}
                 try:
                     self.socket_rep.send_string(json.dumps(respuesta))
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     
     config = configuraciones.get(sede)
     if not config:
-        print(f"❌ Sede {sede} no válida. Use 1 o 2")
+        print(f" Sede {sede} no válida. Use 1 o 2")
         sys.exit(1)
     
     gc = GestorCarga(

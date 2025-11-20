@@ -7,7 +7,7 @@ def sincronizar_libros(sede):
     bd_primaria = f"bd_sede{sede}.db"
     bd_replica = f"bd_sede{sede}_replica.db"
     
-    print(f"📚 Sincronizando libros de {bd_primaria} a {bd_replica}...")
+    print(f" Sincronizando libros de {bd_primaria} a {bd_replica}...")
     
     try:
         # Conectar a BD primaria
@@ -22,7 +22,7 @@ def sincronizar_libros(sede):
         cursor_primaria.execute("SELECT * FROM libros")
         libros = cursor_primaria.fetchall()
         
-        print(f"📖 Encontrados {len(libros)} libros en BD primaria")
+        print(f" Encontrados {len(libros)} libros en BD primaria")
         
         # Limpiar libros existentes en réplica (si hay)
         cursor_replica.execute("DELETE FROM libros")
@@ -39,13 +39,13 @@ def sincronizar_libros(sede):
         cursor_replica.execute("SELECT COUNT(*) FROM libros")
         count = cursor_replica.fetchone()[0]
         
-        print(f"✅ Sincronización completa: {count} libros copiados a la réplica")
+        print(f"Sincronización completa: {count} libros copiados a la réplica")
         
         conn_primaria.close()
         conn_replica.close()
         
     except Exception as e:
-        print(f"❌ Error durante sincronización: {e}")
+        print(f" Error durante sincronización: {e}")
         import traceback
         traceback.print_exc()
 

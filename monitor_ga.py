@@ -74,7 +74,7 @@ class MonitorGA:
     
     def monitorear(self):
         """Loop principal de monitoreo"""
-        print("🚀 Iniciando monitoreo continuo del GA...\n")
+        print(" Iniciando monitoreo continuo del GA...\n")
         
         while True:
             try:

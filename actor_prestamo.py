@@ -23,13 +23,13 @@ class ActorPrestamo:
         self.socket_ga = self.context.socket(zmq.REQ)
         self.socket_ga.connect(f"{gc_ip}:{ga_req_port}")
         
-        print(f"🎭 Actor PRÉSTAMO iniciado")
-        print(f"📡 Conectado al GC en {gc_ip}:{gc_prestamo_port}")
-        print(f"💾 Conectado al GA en {gc_ip}:{ga_req_port}\n")
+        print(f" Actor PRÉSTAMO iniciado")
+        print(f" Conectado al GC en {gc_ip}:{gc_prestamo_port}")
+        print(f" Conectado al GA en {gc_ip}:{ga_req_port}\n")
     
     def procesar_prestamos(self):
         """Procesa solicitudes de préstamo de forma síncrona"""
-        print("📡 Esperando solicitudes de préstamo...\n")
+        print(" Esperando solicitudes de préstamo...\n")
         
         while True:
             try:
@@ -37,7 +37,7 @@ class ActorPrestamo:
                 mensaje = self.socket_rep.recv_string()
                 solicitud = json.loads(mensaje)
                 
-                print(f"📥 PRÉSTAMO SÍNCRONO | Usuario: {solicitud['usuario']} | Libro: {solicitud['codigo']}")
+                print(f" PRÉSTAMO SÍNCRONO | Usuario: {solicitud['usuario']} | Libro: {solicitud['codigo']}")
                 
                 # 2. Verificar disponibilidad en GA
                 verificacion = {
@@ -50,7 +50,7 @@ class ActorPrestamo:
                 
                 if not respuesta_verificacion.get("disponible", False):
                     # Libro no disponible
-                    print(f"❌ {respuesta_verificacion['mensaje']}\n")
+                    print(f" {respuesta_verificacion['mensaje']}\n")
                     self.socket_rep.send_string(json.dumps({
                         "exito": False,
                         "mensaje": respuesta_verificacion["mensaje"]
@@ -71,17 +71,17 @@ class ActorPrestamo:
                 self.socket_rep.send_string(json.dumps(respuesta_prestamo))
                 
                 if respuesta_prestamo.get("exito", False):
-                    print(f"✅ {respuesta_prestamo['mensaje']} - Fecha devolución: {respuesta_prestamo.get('fecha_devolucion', 'N/A')}\n")
+                    print(f" {respuesta_prestamo['mensaje']} - Fecha devolución: {respuesta_prestamo.get('fecha_devolucion', 'N/A')}\n")
                 else:
-                    print(f"❌ {respuesta_prestamo['mensaje']}\n")
+                    print(f" {respuesta_prestamo['mensaje']}\n")
                 
                 time.sleep(0.1)
                 
             except KeyboardInterrupt:
-                print("\n🛑 Deteniendo Actor de Préstamos...")
+                print("\n Deteniendo Actor de Préstamos...")
                 break
             except Exception as e:
-                print(f"❌ Error procesando préstamo: {e}")
+                print(f" Error procesando préstamo: {e}")
                 try:
                     self.socket_rep.send_string(json.dumps({
                         "exito": False,
